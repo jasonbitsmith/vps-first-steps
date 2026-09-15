@@ -24,7 +24,7 @@ skipped with a flag.
 ## Quick start
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<you>/<repo>/main/vps-init.sh -o vps-init.sh
+curl -fsSL https://raw.githubusercontent.com/jasonbitsmith/vps-first-steps/main/vps-init.sh -o vps-init.sh
 chmod +x vps-init.sh
 sudo ./vps-init.sh --user deploy --ssh-key-url https://github.com/<your-github-username>.keys \
   --timezone Asia/Shanghai --disable-password-auth
@@ -33,8 +33,8 @@ sudo ./vps-init.sh --user deploy --ssh-key-url https://github.com/<your-github-u
 Or clone the repo and run it locally:
 
 ```bash
-git clone https://github.com/<you>/<repo>.git
-cd <repo>
+git clone https://github.com/jasonbitsmith/vps-first-steps.git
+cd vps-first-steps
 sudo ./vps-init.sh --help
 ```
 

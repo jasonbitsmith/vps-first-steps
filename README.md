@@ -4,7 +4,7 @@
 
 **在你的 VPS 终端里运行。默认保留现有 SSH 登录方式和端口。**
 
-> 当前为待实机验证的改进版本。已做本地语法和输入校验测试；尚未验证各发行版上的完整部署，不承诺所有 VPS 均可运行。
+> 已在一台 Ubuntu 26.04 LTS x86_64 机器上完成默认流程测试，并由用户确认新的 SSH 连接成功。该机器已有软件和 swap，不是全新系统；重启、高级选项及其他发行版仍待验证。详见 [测试记录](TESTING.md)。
 
 ## 先弄清楚：这个项目做什么？
 
@@ -58,14 +58,12 @@ sudo bash vps-init.sh
 
 **运行期间保留窗口。完成后另开一个终端，用原来的用户名、密钥或密码、端口再次登录，确认成功后再关闭旧窗口。**
 
-> 上述下载地址指向 main 分支的最新版本；当前仍待 VPS 实机验证。
+> 上述下载地址指向 main 分支的最新版本；完整测试范围见测试记录。
 
 ## 完成后检查什么？
 
 ```bash
-sudo ufw status verbose
-sudo systemctl is-active fail2ban
-swapon --show
+sudo bash vps-init.sh --status
 ```
 
 - 防火墙应显示 `active`，并放行你的 SSH 端口。
@@ -89,6 +87,7 @@ swapon --show
 
 | 参数 | 用途 |
 | --- | --- |
+| `--status` | 只读汇总防火墙、fail2ban、SSH 防护和实际 swap |
 | `--check` | 只读检查，不执行初始化 |
 | `--timezone Asia/Shanghai` | 设置时区；默认不改 |
 | `--no-swap` / `--swap 1G` | 不创建 swap / 修改大小 |

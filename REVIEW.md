@@ -1,6 +1,6 @@
 # 改进说明
 
-本次改进基于 jasonbitsmith/vps-first-steps 原有脚本；VPS 实机验证待完成。
+本次改进基于 jasonbitsmith/vps-first-steps 原有脚本；默认流程的有限实机验证见 TESTING.md；其他范围仍待完成。
 
 ## 已改进
 
@@ -23,7 +23,7 @@
 - python3 -m unittest test_cli -v：3 个测试方法通过，其中输入验证覆盖 8 个错误案例。
 - SSH 失败恢复测试使用临时文件及模拟 sshd/systemctl，不会修改真实系统。
 - Skill 官方快速校验器因本机缺少 PyYAML 未运行完成；frontmatter 已人工检查。
-- 未连接 VPS，未进行 apt、UFW、swap、systemd 的真实部署测试。
+- 初版静态审查后，用户进行了默认流程测试，见 TESTING.md。
 
 ## 发布前应完成的实机验证
 

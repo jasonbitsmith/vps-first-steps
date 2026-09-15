@@ -24,6 +24,7 @@ DISABLE_PASSWORD_AUTH="false"
 DISABLE_ROOT_LOGIN="false"
 INSTALL_BASIC_TOOLS="true"
 ENABLE_AUTO_UPDATES="true"
+STATUS_ONLY="false"
 CHECK_ONLY="false"
 NON_INTERACTIVE="false"
 SKIP_FIREWALL="false"
@@ -53,6 +54,7 @@ Options:
   --disable-password-auth  Disable SSH password authentication (key-only login)
   --keep-root-login        Preserve existing root-login policy (default)
   --disable-root-login     Disable root login after testing the new account
+  --status                Read-only report of current services and swap
   --check                 Read-only prerequisite check; make no changes
   --no-firewall            Skip UFW firewall setup
   --no-fail2ban            Skip fail2ban installation
@@ -236,7 +238,51 @@ APT::Periodic::Unattended-Upgrade "1";
 EOF
 }
 
+report_status() {
+  local output
+  printf '\n=== 当前状态（只读检查） ===\n'
+  printf '\n[防火墙 UFW]\n'
+  if command -v ufw >/dev/null; then
+    LC_ALL=C ufw status verbose || warn "无法读取防火墙状态"
+  else
+    warn "UFW 未安装"
+  fi
+  printf '\n[fail2ban 服务]\n'
+  if command -v systemctl >/dev/null; then
+    systemctl is-active fail2ban || warn "fail2ban 未运行或无法查询"
+  else
+    warn "systemctl 不可用"
+  fi
+  printf '\n[SSH 防护规则]\n'
+  if command -v fail2ban-client >/dev/null; then
+    # Avoid printing banned IP addresses in a report people may share.
+    if output="$(fail2ban-client status sshd 2>&1)"; then
+      printf '%s\n' "$output" | sed '/Banned IP list:/d'
+    else
+      warn "无法读取 sshd 防护规则；请检查 fail2ban"
+    fi
+  else
+    warn "fail2ban-client 未安装"
+  fi
+  printf '\n[实际 swap：不是配置的目标大小]\n'
+  if command -v swapon >/dev/null; then
+    if output="$(swapon --show --noheadings --output NAME,TYPE,SIZE,USED 2>/dev/null)"; then
+      if [[ -n "$output" ]]; then
+        printf 'NAME TYPE SIZE USED\n%s\n' "$output"
+      else
+        printf '没有启用的 swap\n'
+      fi
+    else
+      warn "无法读取 swap 状态"
+    fi
+  else
+    warn "swapon 不可用"
+  fi
+  printf '\n此报告不验证外部 SSH 登录、重启后状态或原有业务。\n'
+}
+
 print_summary() {
+  report_status
   cat <<EOF
 
 $(printf '\033[1;36m=========================================================\033[0m')
@@ -246,9 +292,6 @@ $(printf '\033[1;36m=========================================================\03
  - Root login:       $( [[ "${DISABLE_ROOT_LOGIN}" == "true" ]] && echo disabled || echo unchanged )
  - Password auth:    $( [[ "${DISABLE_PASSWORD_AUTH}" == "true" ]] && echo disabled || echo unchanged )
  - New user:         ${NEW_USER:-none created}
- - Firewall (ufw):   $( [[ "${SKIP_FIREWALL}" == "true" ]] && echo skipped || echo unchanged )
- - fail2ban:         $( [[ "${SKIP_FAIL2BAN}" == "true" ]] && echo skipped || echo unchanged )
- - Swap:             $( [[ "${SKIP_SWAP}" == "true" ]] && echo skipped || echo "${SWAP_SIZE}" )
 
  IMPORTANT: Open a NEW terminal window now and confirm you can log in:
    ssh -p ${SSH_PORT} ${NEW_USER:-<user>}@<server-ip>
@@ -276,6 +319,7 @@ while [[ $# -gt 0 ]]; do
     --swap) SWAP_SIZE="$2"; shift 2 ;;
     --no-swap) SKIP_SWAP="true"; shift ;;
     --disable-password-auth) DISABLE_PASSWORD_AUTH="true"; shift ;;
+    --status) STATUS_ONLY="true"; shift ;;
     --check) CHECK_ONLY="true"; shift ;;
     --disable-root-login) DISABLE_ROOT_LOGIN="true"; shift ;;
     --keep-root-login) DISABLE_ROOT_LOGIN="false"; shift ;;
@@ -288,6 +332,13 @@ while [[ $# -gt 0 ]]; do
     *) die "Unknown option: $1 (see --help)" ;;
   esac
 done
+
+# Status is independent of installation options and never runs setup steps.
+if [[ "$STATUS_ONLY" == true ]]; then
+  require_root
+  report_status
+  exit 0
+fi
 
 # Validate before changing the machine.
 [[ -z "$NEW_USER" || "$NEW_USER" =~ ^[a-z_][a-z0-9_-]{0,30}$ ]] || die "Invalid username"

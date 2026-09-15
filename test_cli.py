@@ -53,5 +53,22 @@ systemctl() { return 0; }
             self.assertEqual(main.read_text(), 'Port 2222\nPermitRootLogin yes\n')
             self.assertIn('restored', result.stderr)
 
+class StatusTests(unittest.TestCase):
+    def test_report_uses_actual_swap_and_service_state(self):
+        code = SCRIPT.read_text().split('report_status() {', 1)[1].split('\nprint_summary()', 1)[0]
+        mocks = """set -euo pipefail
+warn() { echo "$*"; }
+ufw() { echo 'Status: active'; }
+systemctl() { echo active; }
+fail2ban-client() { printf 'Status for the jail: sshd\\nBanned IP list: 192.0.2.1\\n'; }
+swapon() { echo '/swap file 545M 61M'; }
+"""
+        result = subprocess.run(['bash', '-c', mocks + 'report_status() {' + code + '\nreport_status'], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('545M', result.stdout)
+        self.assertIn('Status: active', result.stdout)
+        self.assertNotIn('2G', result.stdout)
+        self.assertNotIn('192.0.2.1', result.stdout)
+
 if __name__ == '__main__':
     unittest.main()
